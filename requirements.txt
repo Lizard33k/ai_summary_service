@@ -1,1 +1,26 @@
 ## This is the requirement file
+# --- Core framework ---
+fastapi==0.115.0
+uvicorn[standard]==0.30.1
+
+# --- LangChain + LLMs ---
+langchain==0.3.0
+langchain-openai==0.2.0
+langchain-core==0.3.0
+pydantic==2.8.2
+pydantic-settings==2.3.4
+
+# --- HTTP requests ---
+requests==2.32.3
+httpx==0.27.2
+
+# --- Environment management ---
+python-dotenv==1.0.1
+
+# --- Optional: for local development, hot reload, and formatting ---
+black==24.8.0
+isort==5.13.2
+flake8==7.1.1
+
+# --- Optional: if you use CORS or JSON handling utilities ---
+starlette==0.38.2
