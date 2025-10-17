@@ -15,6 +15,17 @@ from langchain_core.output_parsers import JsonOutputParser, PydanticOutputParser
 from langchain_core.runnables import Runnable
 from langchain_core.messages import HumanMessage
 
+import os
+
+# Get path to project root (one level up from utils)
+project_root = os.path.dirname(os.path.dirname(__file__))
+
+# Build path to secret file
+key_file = os.path.join(project_root, "secret_keys", "secret_keys1.txt")
+
+with open(key_file, "r") as f:
+    api_key = f.read().strip()  
+
 
 # ---------- Pydantic Schemas (Structured Outputs) ----------
 
@@ -113,10 +124,14 @@ class AISummaryServiceLC:
     def __init__(self):
         # Uses OpenAI-compatible Chat model via LangChain
         # If you're on OpenRouter, set OPENAI_BASE_URL + OPENAI_API_KEY accordingly.
+        # self.llm = ChatOpenAI(
+        # openai_api_base="http://localhost:11434/v1/",
+        # openai_api_key="12345678",
+        # model_name="gemma3:4b")
         self.llm = ChatOpenAI(
-        openai_api_base="http://localhost:11434/v1/",
-        openai_api_key="12345678",
-        model_name="gemma3:4b")
+        openai_api_key=api_key,
+        model_name="gpt-4o"
+        )
         # Parsers
         self.company_parser = PydanticOutputParser(pydantic_object=CompanyInfo)
         self.project_parser = PydanticOutputParser(pydantic_object=ProjectInfo)

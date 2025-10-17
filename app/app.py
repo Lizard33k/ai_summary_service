@@ -47,11 +47,19 @@ class SummarizeRequest(BaseModel):
     emails: List[Email]
     attachments: Optional[List[Attachment]] = None
     parsed_attachments: Optional[List[ParsedAttachment]] = None
-
+    # code: int
+    # status: str
+    # message: str
+    # invoice_data: dict
+    # errors: list
 class SummarizeResponse(BaseModel):
+    code: int
+    status: str
+    message: str
     summary: str
     project_name: str
     email_count: int
+    errors: list
 
 
 # ---------- FastAPI App ----------
@@ -76,31 +84,45 @@ def health():
 
 @app.post("/summarize", response_model=SummarizeResponse)
 async def generate_summary(payload: SummarizeRequest):
-    if not payload.emails:
-        raise HTTPException(status_code=400, detail="No emails provided")
+    try:
+        if not payload.emails:
+            raise HTTPException(status_code=400, detail="No emails provided")
 
-    # Convert Pydantic models to plain dicts for the service
-    emails = [e.model_dump(by_alias=True) for e in payload.emails]
-    atts = [a.model_dump() for a in (payload.attachments or [])]
-    parsed = [p.model_dump() for p in (payload.parsed_attachments or [])]
+        # Convert Pydantic models to plain dicts for the service
+        emails = [e.model_dump(by_alias=True) for e in payload.emails]
+        atts = [a.model_dump() for a in (payload.attachments or [])]
+        parsed = [p.model_dump() for p in (payload.parsed_attachments or [])]
 
-    # Call LangChain service (run sync in a thread to avoid blocking)
-    def _run():
-        return ai_summary_service.generate_summary(
+        # Call LangChain service (run sync in a thread to avoid blocking)
+        def _run():
+            return ai_summary_service.generate_summary(
+                project_name=payload.project_name,
+                emails=emails,
+                page_name=payload.page_name,           # <-- pass page_name in correct slot
+                attachments=atts,
+                parsed_attachments=parsed
+            )
+
+        summary: Optional[str] = await run_in_threadpool(_run)
+
+
+
+        return SummarizeResponse(
+            code = 1,
+            status = "success",
+            message = "Summary Generation Successful",
+            summary=summary,
             project_name=payload.project_name,
-            emails=emails,
-            page_name=payload.page_name,           # <-- pass page_name in correct slot
-            attachments=atts,
-            parsed_attachments=parsed
+            email_count=len(emails),
+            errors = []
         )
-
-    summary: Optional[str] = await run_in_threadpool(_run)
-
-    if not summary:
-        raise HTTPException(status_code=500, detail="Failed to generate summary")
-
-    return SummarizeResponse(
-        summary=summary,
-        project_name=payload.project_name,
-        email_count=len(emails)
-    )
+    except Exception as e:
+        return SummarizeResponse(
+            code = 99,
+            status = "Failed",
+            message = "Summary Generation Failed",
+            summary="",
+            project_name=payload.project_name,
+            email_count=len(emails),
+            errors = [str(e)]
+        )
